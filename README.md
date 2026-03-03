@@ -1,66 +1,95 @@
-# Job Hunt Tracker
+# Job Hunt Tracker 🚀
 
-A full-stack job application tracking app built with Next.js 14, TypeScript, Tailwind CSS, and Supabase.
+A full-stack job application tracking app built with **Next.js 14**, **TypeScript**, **Tailwind CSS**, and **Supabase**. Track, edit, and approve your dream job applications with one powerful dashboard.
 
-## Features
+## ✨ Features
 
-- **Track 15 Job Applications** - Pre-loaded with companies including Stripe, Block, PayPal, and more
-- **Edit Cover Letters** - Inline editing for all cover letters
-- **Status Management** - Track applications as Pending, Approved, or Submitted
-- **Stats Dashboard** - Overview of total, pending, approved, and submitted applications
-- **Filter by Status** - Quickly view applications by their current status
-- **Discord Notifications** - Automatic Discord messages when you approve an application
-- **Responsive Design** - Beautiful UI with Tailwind CSS
+✅ **Track 15 Job Applications** - Pre-loaded with top tech companies  
+✅ **Inline Cover Letter Editing** - Edit and save cover letters directly in the app  
+✅ **Status Management** - Track applications as Pending → Approved → Submitted  
+✅ **Real-time Stats Dashboard** - Overview of total, approved, and submitted applications  
+✅ **Smart Filtering** - Filter applications by status in one click  
+✅ **Discord Notifications** - Get notified on Discord when you approve an application  
+✅ **Beautiful UI** - Responsive dark theme with Tailwind CSS  
+✅ **Production-Ready** - TypeScript, error handling, and graceful fallbacks  
 
-## Tech Stack
+## 🎯 Live Demo
 
-- **Frontend**: Next.js 14, TypeScript, Tailwind CSS
-- **Backend**: Supabase (PostgreSQL + Auth)
-- **API**: Next.js API Routes
-- **Deployment**: Netlify (Frontend)
+**🔗 [https://hani-job-hunt-1772505543.netlify.app](https://hani-job-hunt-1772505543.netlify.app)**
 
-## Getting Started
+## 📋 Job Companies
+
+1. **Stripe** - Senior Software Engineer ($200K-$240K)
+2. **Block** - Staff Engineer ($210K-$250K)
+3. **PayPal** - Principal Engineer ($180K-$220K)
+4. **Toast** - Engineering Manager ($170K-$210K)
+5. **Carta** - Backend Engineer ($160K-$200K)
+6. **Google** - Software Engineer ($190K-$230K)
+7. **Affirm** - Senior Backend Engineer ($165K-$205K)
+8. **Shopify** - Infrastructure Engineer ($175K-$215K)
+9. **TPG** - Technology Associate ($150K-$190K)
+10. **Airbnb** - Senior Software Engineer ($185K-$225K)
+11. **Amazon** - Senior Software Development Engineer ($170K-$210K)
+12. **Betterment** - Engineering Lead ($155K-$195K)
+13. **Klarna** - Backend Engineer ($160K-$200K)
+14. **Plaid** - Infrastructure Engineer ($180K-$220K)
+15. **DoorDash** - Senior Software Engineer ($175K-$215K)
+
+## 🛠 Tech Stack
+
+- **Frontend**: Next.js 14, React 19, TypeScript
+- **Styling**: Tailwind CSS
+- **Backend**: Next.js API Routes
+- **Database**: Supabase (PostgreSQL)
+- **Auth**: Supabase Auth
+- **Deployment**: Netlify
+- **Notifications**: Discord Webhooks
+
+## 🚀 Getting Started
 
 ### Prerequisites
 
 - Node.js 18+ and npm
-- Supabase account and project
+- Supabase account (free tier works)
 - Discord webhook URL (optional)
 
 ### Installation
 
-1. Clone the repository:
+1. **Clone the repository:**
 ```bash
 git clone https://github.com/hanishabsigh/job-hunt-app.git
 cd job-hunt-app
 ```
 
-2. Install dependencies:
+2. **Install dependencies:**
 ```bash
 npm install
 ```
 
-3. Set up environment variables:
-Create `.env.local` with:
-```
-NEXT_PUBLIC_SUPABASE_URL=your_supabase_url
-NEXT_PUBLIC_SUPABASE_ANON_KEY=your_supabase_anon_key
-DISCORD_WEBHOOK_URL=your_discord_webhook_url
+3. **Create `.env.local`:**
+```bash
+NEXT_PUBLIC_SUPABASE_URL=https://kftjdcqxsilexifowrux.supabase.co
+NEXT_PUBLIC_SUPABASE_ANON_KEY=your_anon_key_here
+DISCORD_WEBHOOK_URL=https://discord.com/api/webhooks/YOUR_ID/YOUR_TOKEN
 ```
 
-4. Run the development server:
+4. **Run development server:**
 ```bash
 npm run dev
 ```
 
 Open [http://localhost:3000](http://localhost:3000) in your browser.
 
-## Supabase Setup
+## 🔧 Supabase Setup
 
-### Create the `jobs` Table
+**⚠️ Important:** The app includes demo data fallback. For full functionality with persistent data, follow these steps:
+
+### 1. Create the Database Table
+
+Visit https://app.supabase.com/project/kftjdcqxsilexifowrux/editor and run:
 
 ```sql
-CREATE TABLE jobs (
+CREATE TABLE IF NOT EXISTS jobs (
   id UUID PRIMARY KEY DEFAULT gen_random_uuid(),
   company TEXT NOT NULL,
   role TEXT NOT NULL,
@@ -72,43 +101,128 @@ CREATE TABLE jobs (
   updated_at TIMESTAMP WITH TIME ZONE DEFAULT CURRENT_TIMESTAMP
 );
 
-CREATE INDEX idx_jobs_status ON jobs(status);
+CREATE INDEX IF NOT EXISTS idx_jobs_status ON jobs(status);
+CREATE INDEX IF NOT EXISTS idx_jobs_created_at ON jobs(created_at DESC);
+
+ALTER TABLE jobs ENABLE ROW LEVEL SECURITY;
+
+CREATE POLICY IF NOT EXISTS jobs_public_read ON jobs
+  FOR SELECT USING (true);
+
+CREATE POLICY IF NOT EXISTS jobs_public_insert ON jobs
+  FOR INSERT WITH CHECK (true);
+
+CREATE POLICY IF NOT EXISTS jobs_public_update ON jobs
+  FOR UPDATE USING (true) WITH CHECK (true);
 ```
 
-## API Routes
+### 2. Update Environment Variables
 
-- `GET/POST /api/jobs` - Fetch all jobs or initialize jobs
-- `PATCH /api/jobs/[id]` - Update a job's cover letter
-- `POST /api/jobs/[id]/approve` - Approve a job and send Discord notification
+Get your credentials from Supabase Project Settings:
+- `NEXT_PUBLIC_SUPABASE_URL` - Your project URL
+- `NEXT_PUBLIC_SUPABASE_ANON_KEY` - Public anonymous key
 
-## Deployment
+## 📡 API Routes
 
-### Netlify Deployment
+| Endpoint | Method | Description |
+|----------|--------|-------------|
+| `/api/jobs` | GET | Fetch all jobs |
+| `/api/jobs` | POST | Initialize jobs from seed data |
+| `/api/jobs/[id]` | PATCH | Update job cover letter |
+| `/api/jobs/[id]/approve` | POST | Approve job & send Discord notification |
 
-1. Connect your GitHub repository to Netlify
-2. Set up environment variables in Netlify dashboard
-3. Deploy automatically on push to main branch
+## 🔔 Discord Integration
 
-## Job Data
+1. Go to your Discord server's #job-hunt channel
+2. Channel Settings → Integrations → Webhooks → New Webhook
+3. Copy the webhook URL
+4. Add to environment variables as `DISCORD_WEBHOOK_URL`
 
-The app comes pre-populated with 15 companies:
+When you approve a job, you'll get a notification like:
+```
+✅ Job Application Approved
+Company: Stripe
+Role: Senior Software Engineer
+Salary: $200K-$240K
+Status: Approved for Submission
+```
 
-1. Stripe - Senior Software Engineer
-2. Block - Staff Engineer
-3. PayPal - Principal Engineer
-4. Toast - Engineering Manager
-5. Carta - Backend Engineer
-6. Google - Software Engineer
-7. Affirm - Senior Backend Engineer
-8. Shopify - Infrastructure Engineer
-9. TPG - Technology Associate
-10. Airbnb - Senior Software Engineer
-11. Amazon - Senior Software Development Engineer
-12. Betterment - Engineering Lead
-13. Klarna - Backend Engineer
-14. Plaid - Infrastructure Engineer
-15. DoorDash - Senior Software Engineer
+## 📦 Deployment
 
-## License
+### Deploy to Netlify
 
-MIT
+1. Push to GitHub
+2. Connect repository to Netlify
+3. Set environment variables in Netlify dashboard
+4. Deploy (automatic on push)
+
+**Current Status**: Deployed at https://hani-job-hunt-1772505543.netlify.app
+
+## 📝 Development
+
+### Build for Production
+```bash
+npm run build
+npm run start
+```
+
+### TypeScript & Linting
+```bash
+npm run lint
+npm run type-check
+```
+
+### Project Structure
+```
+app/
+  ├── page.tsx                    # Main dashboard
+  ├── layout.tsx                  # Root layout
+  ├── api/
+  │   └── jobs/
+  │       ├── route.ts            # GET/POST jobs
+  │       └── [id]/
+  │           ├── route.ts        # PATCH job
+  │           └── approve/route.ts # POST approve + Discord
+  └── components/
+      ├── JobCard.tsx             # Job display & edit
+      └── StatsBoard.tsx           # Stats dashboard
+
+lib/
+  ├── supabase.ts                 # Supabase client
+  └── jobs-data.ts                # 15 job seed data
+```
+
+## 🐛 Troubleshooting
+
+### Jobs not loading?
+- Ensure Supabase table is created (see SETUP_SUPABASE.md)
+- Check environment variables are correct
+- The app includes demo data fallback - it will still work!
+
+### Discord notifications not working?
+- Verify webhook URL is correct
+- Check Discord channel permissions allow webhooks
+- Look at deployment logs for errors
+
+### Environment variables not working?
+- For local: use `.env.local` file
+- For Netlify: set in Netlify dashboard
+- Restart dev server after changing `.env.local`
+
+## 📄 License
+
+MIT - Feel free to use this as a template for your own projects!
+
+## 🎓 What I Learned Building This
+
+- ✅ Next.js 14 dynamic routes with async params
+- ✅ Supabase RLS (Row Level Security) policies
+- ✅ Discord webhook embeds
+- ✅ TypeScript component patterns
+- ✅ Tailwind responsive design
+- ✅ Error handling & graceful fallbacks
+- ✅ Netlify deployment & environment management
+
+---
+
+**Built with ❤️ for Hani Shabsigh**
