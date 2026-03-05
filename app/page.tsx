@@ -1,136 +1,307 @@
 'use client';
 
-import { useEffect, useState } from 'react';
-import JobCard from './components/JobCard';
-import StatsBoard from './components/StatsBoard';
-
-type Job = {
-  id: string;
-  company: string;
-  role: string;
-  salary: string;
-  url: string;
-  cover_letter: string;
-  status: 'pending' | 'approved' | 'submitted';
-  created_at: string;
-  updated_at: string;
-};
+import { useState, useEffect } from 'react';
+import { fetchJobs, updateJob, createJob, type Job } from '@/lib/supabase';
+import './page.css';
 
 export default function Home() {
   const [jobs, setJobs] = useState<Job[]>([]);
-  const [filter, setFilter] = useState<'all' | 'pending' | 'approved' | 'submitted'>('all');
+  const [filter, setFilter] = useState<string>('all');
+  const [editingId, setEditingId] = useState<number | null>(null);
+  const [editForm, setEditForm] = useState<Partial<Job>>({});
+  const [showAddForm, setShowAddForm] = useState(false);
   const [loading, setLoading] = useState(true);
-  const [editingId, setEditingId] = useState<string | null>(null);
+  const [newJob, setNewJob] = useState({
+    company: '',
+    role: '',
+    salary: '',
+    url: '',
+    cover_letter: '',
+  });
 
+  // Load jobs from Supabase on mount
   useEffect(() => {
-    fetchJobs();
+    const loadJobs = async () => {
+      setLoading(true);
+      const data = await fetchJobs();
+      setJobs(data);
+      setLoading(false);
+    };
+    loadJobs();
   }, []);
 
-  const fetchJobs = async () => {
-    try {
-      const res = await fetch('/api/jobs', { method: 'GET' });
-      const data = await res.json();
-      setJobs(Array.isArray(data) ? data : []);
-    } catch (err) {
-      console.error('Failed to fetch jobs:', err);
-      // Initialize jobs
-      const res = await fetch('/api/jobs', { method: 'POST' });
-      const data = await res.json();
-      setJobs(Array.isArray(data) ? data : []);
-    } finally {
-      setLoading(false);
+  const filteredJobs = jobs.filter(
+    (job) => filter === 'all' || job.status === filter
+  );
+
+  const stats = {
+    total: jobs.length,
+    pending: jobs.filter((j) => j.status === 'pending').length,
+    approved: jobs.filter((j) => j.status === 'approved').length,
+    rejected: jobs.filter((j) => j.status === 'rejected').length,
+    submitted: jobs.filter((j) => j.status === 'submitted').length,
+  };
+
+  const handleApprove = async (id: number) => {
+    const updated = await updateJob(id, { status: 'approved' });
+    if (updated) {
+      setJobs(jobs.map((job) => (job.id === id ? updated : job)));
     }
   };
 
-  const filteredJobs = filter === 'all' ? jobs : jobs.filter((j) => j.status === filter);
+  const handleReject = async (id: number) => {
+    const updated = await updateJob(id, { status: 'rejected' });
+    if (updated) {
+      setJobs(jobs.map((job) => (job.id === id ? updated : job)));
+    }
+  };
 
-  const handleUpdateCoverLetter = async (jobId: string, newText: string) => {
-    try {
-      const res = await fetch(`/api/jobs/${jobId}`, {
-        method: 'PATCH',
-        headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({ cover_letter: newText }),
-      });
-      const updated = await res.json();
-      setJobs(jobs.map((j) => (j.id === jobId ? updated[0] : j)));
+  const handleSubmitted = async (id: number) => {
+    const updated = await updateJob(id, { status: 'submitted' });
+    if (updated) {
+      setJobs(jobs.map((job) => (job.id === id ? updated : job)));
+    }
+  };
+
+  const handleEdit = (job: Job) => {
+    setEditingId(job.id);
+    setEditForm({
+      company: job.company,
+      role: job.role,
+      salary: job.salary,
+      url: job.url,
+      cover_letter: job.cover_letter,
+    });
+  };
+
+  const handleSaveEdit = async (id: number) => {
+    const updated = await updateJob(id, editForm);
+    if (updated) {
+      setJobs(jobs.map((job) => (job.id === id ? updated : job)));
       setEditingId(null);
-    } catch (err) {
-      console.error('Failed to update job:', err);
     }
   };
 
-  const handleApprove = async (jobId: string) => {
-    try {
-      const res = await fetch(`/api/jobs/${jobId}/approve`, {
-        method: 'POST',
-        headers: { 'Content-Type': 'application/json' },
+  const handleAddJob = async (e: React.FormEvent) => {
+    e.preventDefault();
+    const created = await createJob({
+      company: newJob.company,
+      role: newJob.role,
+      salary: newJob.salary,
+      url: newJob.url,
+      cover_letter: newJob.cover_letter,
+      status: 'pending',
+    });
+    
+    if (created) {
+      setJobs([created, ...jobs]);
+      setNewJob({
+        company: '',
+        role: '',
+        salary: '',
+        url: '',
+        cover_letter: '',
       });
-      const updated = await res.json();
-      setJobs(jobs.map((j) => (j.id === jobId ? updated[0] : j)));
-    } catch (err) {
-      console.error('Failed to approve job:', err);
+      setShowAddForm(false);
     }
   };
 
   return (
-    <div className="min-h-screen bg-gradient-to-br from-slate-900 via-slate-800 to-slate-900 text-white p-8">
-      <div className="max-w-7xl mx-auto">
-        {/* Header */}
-        <div className="mb-10">
-          <h1 className="text-5xl font-bold mb-2">Job Hunt Tracker</h1>
-          <p className="text-slate-400 text-lg">Track, edit, and approve your job applications</p>
+    <div className="container">
+      <header>
+        <h1>🌊 Job Hunt Tracker</h1>
+        <p className="subtitle">Hani Shabsigh — Director/GPM/Head of Product ($300k+)</p>
+
+        <div className="stats-grid">
+          <div className="stat">
+            <div className="stat-value">{stats.total}</div>
+            <div className="stat-label">Total</div>
+          </div>
+          <div className="stat">
+            <div className="stat-value">{stats.pending}</div>
+            <div className="stat-label">Pending</div>
+          </div>
+          <div className="stat">
+            <div className="stat-value">{stats.approved}</div>
+            <div className="stat-label">Approved</div>
+          </div>
+          <div className="stat">
+            <div className="stat-value">{stats.rejected}</div>
+            <div className="stat-label">Rejected</div>
+          </div>
+          <div className="stat">
+            <div className="stat-value">{stats.submitted}</div>
+            <div className="stat-label">Submitted</div>
+          </div>
         </div>
+      </header>
 
-        {/* Stats */}
-        <StatsBoard jobs={jobs} />
-
-        {/* Filter Buttons */}
-        <div className="flex gap-3 mb-8">
-          {(['all', 'pending', 'approved', 'submitted'] as const).map((status) => (
+      <div className="controls">
+        <div className="filters">
+          {['all', 'pending', 'approved', 'rejected', 'submitted'].map((f) => (
             <button
-              key={status}
-              onClick={() => setFilter(status)}
-              className={`px-6 py-2 rounded-lg font-medium transition ${
-                filter === status
-                  ? 'bg-blue-600 text-white'
-                  : 'bg-slate-700 text-slate-300 hover:bg-slate-600'
-              }`}
+              key={f}
+              onClick={() => setFilter(f)}
+              className={`filter-btn ${filter === f ? 'active' : ''}`}
             >
-              {status.charAt(0).toUpperCase() + status.slice(1)}
+              {f.charAt(0).toUpperCase() + f.slice(1)}
             </button>
           ))}
         </div>
-
-        {/* Loading State */}
-        {loading ? (
-          <div className="text-center py-12">
-            <p className="text-slate-400">Loading jobs...</p>
-          </div>
-        ) : (
-          <>
-            {/* Jobs Grid */}
-            <div className="grid gap-6 md:grid-cols-2 lg:grid-cols-3">
-              {filteredJobs.map((job) => (
-                <JobCard
-                  key={job.id}
-                  job={job}
-                  isEditing={editingId === job.id}
-                  onEditStart={() => setEditingId(job.id)}
-                  onEditCancel={() => setEditingId(null)}
-                  onUpdateCoverLetter={handleUpdateCoverLetter}
-                  onApprove={handleApprove}
-                />
-              ))}
-            </div>
-
-            {filteredJobs.length === 0 && (
-              <div className="text-center py-12">
-                <p className="text-slate-400 text-lg">No jobs with status: {filter}</p>
-              </div>
-            )}
-          </>
-        )}
+        <button
+          onClick={() => setShowAddForm(!showAddForm)}
+          className="add-btn"
+        >
+          + Add Job
+        </button>
       </div>
+
+      {showAddForm && (
+        <div className="add-form">
+          <h3>Add New Job</h3>
+          <form onSubmit={handleAddJob}>
+            <input
+              type="text"
+              placeholder="Company Name"
+              value={newJob.company}
+              onChange={(e) => setNewJob({ ...newJob, company: e.target.value })}
+              required
+            />
+            <input
+              type="text"
+              placeholder="Role"
+              value={newJob.role}
+              onChange={(e) => setNewJob({ ...newJob, role: e.target.value })}
+              required
+            />
+            <input
+              type="text"
+              placeholder="Salary (e.g., $300k-$350k)"
+              value={newJob.salary}
+              onChange={(e) => setNewJob({ ...newJob, salary: e.target.value })}
+              required
+            />
+            <input
+              type="url"
+              placeholder="Job URL"
+              value={newJob.url}
+              onChange={(e) => setNewJob({ ...newJob, url: e.target.value })}
+              required
+            />
+            <textarea
+              placeholder="Cover Letter"
+              value={newJob.cover_letter}
+              onChange={(e) => setNewJob({ ...newJob, cover_letter: e.target.value })}
+              required
+            />
+            <div className="form-actions">
+              <button type="submit" className="save-btn">Add Job</button>
+              <button type="button" onClick={() => setShowAddForm(false)} className="cancel-btn">Cancel</button>
+            </div>
+          </form>
+        </div>
+      )}
+
+      {loading ? (
+        <div className="loading-state">
+          <p>Loading jobs from Supabase...</p>
+        </div>
+      ) : (
+        <div className="jobs-list">
+          {filteredJobs.map((job) => (
+            <div key={job.id} className="job-card">
+              {editingId === job.id ? (
+                <div className="edit-mode">
+                  <div className="edit-form">
+                    <input
+                      type="text"
+                      value={editForm.company || ''}
+                      onChange={(e) => setEditForm({ ...editForm, company: e.target.value })}
+                      placeholder="Company"
+                      className="edit-input"
+                    />
+                    <input
+                      type="text"
+                      value={editForm.role || ''}
+                      onChange={(e) => setEditForm({ ...editForm, role: e.target.value })}
+                      placeholder="Role"
+                      className="edit-input"
+                    />
+                    <input
+                      type="text"
+                      value={editForm.salary || ''}
+                      onChange={(e) => setEditForm({ ...editForm, salary: e.target.value })}
+                      placeholder="Salary"
+                      className="edit-input"
+                    />
+                    <input
+                      type="url"
+                      value={editForm.url || ''}
+                      onChange={(e) => setEditForm({ ...editForm, url: e.target.value })}
+                      placeholder="Job URL"
+                      className="edit-input"
+                    />
+                    <textarea
+                      value={editForm.cover_letter || ''}
+                      onChange={(e) => setEditForm({ ...editForm, cover_letter: e.target.value })}
+                      placeholder="Cover Letter"
+                      className="edit-textarea"
+                    />
+                    <div className="form-actions">
+                      <button onClick={() => handleSaveEdit(job.id)} className="save-btn">Save</button>
+                      <button onClick={() => setEditingId(null)} className="cancel-btn">Cancel</button>
+                    </div>
+                  </div>
+                </div>
+              ) : (
+                <>
+                  <div className="job-header">
+                    <div>
+                      <h2>{job.company}</h2>
+                      <p className="role">{job.role}</p>
+                      <p className="salary">{job.salary}</p>
+                    </div>
+                    <div className="header-actions">
+                      <a href={job.url} target="_blank" rel="noopener noreferrer" className="view-btn">
+                        View Job
+                      </a>
+                      <span className={`status status-${job.status}`}>
+                        {job.status.toUpperCase()}
+                      </span>
+                    </div>
+                  </div>
+
+                  <div className="cover-letter">
+                    {job.cover_letter.split('\n').map((line, idx) => (
+                      <div key={idx}>{line}</div>
+                    ))}
+                  </div>
+
+                  <div className="actions">
+                    <button onClick={() => handleEdit(job)} className="edit-btn">Edit</button>
+                    {job.status === 'pending' && (
+                      <>
+                        <button onClick={() => handleApprove(job.id)} className="approve-btn">Approve & Apply</button>
+                        <button onClick={() => handleSubmitted(job.id)} className="submit-btn">Submit Now</button>
+                        <button onClick={() => handleReject(job.id)} className="reject-btn">Reject</button>
+                      </>
+                    )}
+                    {job.status === 'approved' && (
+                      <button onClick={() => handleSubmitted(job.id)} className="submit-btn">Mark Submitted</button>
+                    )}
+                  </div>
+                </>
+              )}
+            </div>
+          ))}
+        </div>
+      )}
+
+      {!loading && filteredJobs.length === 0 && (
+        <div className="empty-state">
+          <p>No jobs found in this filter.</p>
+        </div>
+      )}
     </div>
   );
 }
